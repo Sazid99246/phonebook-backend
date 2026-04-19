@@ -1,11 +1,10 @@
 require('dotenv').config()
-const express = require('express');
+const express = require('express')
 var morgan = require('morgan')
-const cors = require('cors');
-const mongoose = require('mongoose');
+const cors = require('cors')
 const Person = require('./models/person')
 
-const app = express();
+const app = express()
 
 app.use(express.json())
 app.use(cors())
@@ -16,13 +15,13 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :b
 
 
 app.get('/', (request, response) => {
-    response.send('<h1>Hello World</h1>')
+  response.send('<h1>Hello World</h1>')
 })
 
 app.get('/api/persons', (request, response) => {
-    Person.find({}).then(person => {
-      response.json(person)
-    })
+  Person.find({}).then(person => {
+    response.json(person)
+  })
 })
 
 app.get('/api/persons/:id', (request, response, next) => {
@@ -49,7 +48,7 @@ app.delete('/api/persons/:id', (request, response, next) => {
     .catch(error => next(error))
 })
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
   const body = request.body
 
   if (!body.name || !body.number) {
@@ -58,14 +57,16 @@ app.post('/api/persons', (request, response) => {
     })
   }
 
-   const newPerson = new Person({
+  const newPerson = new Person({
     name: body.name,
     number: body.number
   })
 
-  newPerson.save().then(savedPerson => {
-    response.json(savedPerson)
-  })
+  newPerson.save()
+    .then(savedPerson => {
+      response.json(savedPerson)
+    })
+    .catch(error => next(error))   // 👈 important
 })
 
 app.put('/api/persons/:id', (request, response, next) => {
@@ -102,7 +103,11 @@ const errorHandler = (error, request, response, next) => {
 
   if (error.name === 'CastError') {
     return response.status(400).send({ error: 'malformatted id' })
-  } 
+  }
+
+  if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
+  }
 
   next(error)
 }
@@ -111,5 +116,5 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {
-    console.log(`Server starting on ${PORT}`);
+  console.log(`Server starting on ${PORT}`)
 })
